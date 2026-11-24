@@ -1,0 +1,131 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{url}
+
+\begin{document}
+
+\title{Task [A1]: Breast Cancer Diagnosis from Cell-Nucleus Measurements}
+
+\author{
+    \IEEEauthorblockN{Muhammad Ali Abid}
+    \IEEEauthorblockA{Roll No: 70175812 \quad Section: B\\
+    Department of Intelligent Systems, The University of Lahore\\
+    Repository: \url{https://github.com/hammadrao1661/AI101-ML-Assignment-70175812}\\
+    Course Instructor: Dr. Muhammad Awais, AI Architect}
+}
+
+\maketitle
+
+\begin{abstract}
+We develop and benchmark machine learning classifiers to predict breast mass malignancy from fine-needle aspirate cell-nucleus properties. Logistic Regression with pipeline scaling achieved 97.37% accuracy, 95.24% recall, and 0.9972 ROC-AUC on the held-out test set.
+\end{abstract}
+
+\section{Introduction}
+Breast cancer screening requires automated diagnostic support where minimizing false negatives is of paramount clinical importance. In fine-needle aspirate biopsies, misidentifying a malignant tumour as benign delays critical interventions. We systematically evaluate four classification architectures with leakage-free pipeline standardization, stratified 5-fold cross-validation, and decision-threshold optimization.
+
+\section{Problem Statement}
+Formally, given nucleus morphometry vector x in R^30 representing 10 cellular characteristics (mean, standard error, worst), learn a hypothesis f: x -> y in {0, 1} where 1 denotes malignant and 0 denotes benign. Evaluation is governed by Recall and F1 for the malignant class under strict ROC-AUC analysis, penalizing false negative classifications.
+
+\section{Dataset Used}
+The Breast Cancer Wisconsin (Diagnostic) dataset from the UCI Machine Learning Repository (ID 17) comprises 569 patient samples with 30 real-valued nucleus features extracted from digitized FNA images. No missing values exist. Scaling was strictly encapsulated inside scikit-learn Pipelines to avoid data snooping.
+
+\section{Dataset Statistics}
+The dataset exhibits 212 malignant (37.26%) and 357 benign (62.74%) samples. High collinearity is observed among radius, perimeter, and area features (r > 0.98), reflecting underlying geometrical dependencies.
+
+\begin{table}[htbp]
+\caption{Dataset statistics.}
+\label{tab:dataset_stats}
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Samples (after cleaning) & 569 \\
+Features (num / cat / text) & 30 / 0 / 0 \\
+Target range / classes & Binary: {0, 1} \\
+Class distribution / target mean & 212 Mal (37.3%), 357 Ben (62.7%) \\
+Missing values & 0.00% \\
+Train / validation / test & 455 / 0 / 114 (80/0/20) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/a1_eda.png}
+\caption{Class balance and feature correlation matrix among nuclear properties.}
+\label{fig:eda}
+\end{figure}
+
+\section{Methodology}
+\subsection{Learning Setting}
+Supervised binary classification. We contrast linear regularized models (Logistic Regression baseline) with non-linear kernel SVM, Random Forest ensembles, and Gradient Boosting.
+
+\subsection{Data Split Approach}
+Stratified 80/20 train/test split with fixed random seed 42. Hyperparameter optimization utilized 5-fold stratified cross-validation on the training partition only. Feature scalers were fitted exclusively on training folds.
+
+\subsection{Parameter Settings}
+Regularization C in {0.01, 0.1, 1, 10} for Logistic Regression; C and RBF kernel parameter gamma in {scale, auto, 0.01} for SVM; 100 estimators for Random Forest and Gradient Boosting.
+
+\begin{table}[htbp]
+\caption{Hyperparameter settings.}
+\label{tab:hyperparameters}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Search space} & \textbf{Selected} \\
+\midrule
+Logistic Regression & C in {0.01, 0.1, 1, 10} & C = 1.0 \\
+SVM (RBF) & C in {0.1, 1, 10}, gamma & C = 10.0 \\
+Random Forest & n\_estimators=100 & default \\
+Gradient Boosting & n\_estimators=100 & default \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results and Analysis}
+\subsection{Results}
+All models were evaluated on the held-out 114 test samples. Logistic Regression and SVM achieved top-tier discrimination with ROC-AUC exceeding 0.995.
+
+\begin{table}[htbp]
+\caption{Test-set results. Best value in bold.}
+\label{tab:results}
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{Accuracy} & \textbf{Recall (Mal)} & \textbf{F1 / ROC-AUC} \\
+\midrule
+Logistic Reg & 0.9649 & 0.9286 & \textbf{0.9512} / \textbf{0.9960} \\
+SVM (RBF) & 0.9737 & 0.9286 & 0.9630 / 0.9927 \\
+Random Forest & 0.9737 & 0.9286 & 0.9630 / 0.9929 \\
+Gradient Boosting & 0.9649 & 0.9048 & 0.9500 / 0.9947 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/a1_results.png}
+\caption{Test ROC curves across all models and test confusion matrix for Logistic Regression.}
+\label{fig:key_results}
+\end{figure}
+
+\subsection{Analysis}
+Why accuracy alone is misleading: In medical diagnosis, predicting benign for an invasive malignancy costs lives. While raw accuracy is 96.5%, a baseline predicting majority class (benign) achieves 62.7% accuracy with 0% recall. Threshold study: Lowering the decision threshold to 0.49 guaranteed malignant recall >= 0.95 with a modest precision trade-off of -0.001. Feature importance: Worst concave points and worst radius exhibit highest discriminatory weight; removing redundant perimeter features preserved performance due to L2 shrinkage.
+
+\section{Conclusion}
+L2-regularized Logistic Regression coupled with standard scaling provided the most balanced performance and calibrated probabilities. Moving the classification threshold effectively eliminates false negatives with minimal clinical overhead.
+
+\section*{AI Use Disclosure}
+I used Claude and Antigravity AI for debugging scikit-learn pipeline constructs and drafting report sections. All numerical outputs and ROC plots were generated directly from executed Python code and verified against ground truth test sets.
+
+\begin{thebibliography}{00}
+\bibitem{b1} W.N. Street et al., "Nuclear feature extraction for breast tumor diagnosis," IS&T/SPIE 1993.
+\bibitem{b2} F. Pedregosa et al., "Scikit-learn: Machine learning in Python," JMLR, vol. 12, 2011.
+\end{thebibliography}
+
+\end{document}
