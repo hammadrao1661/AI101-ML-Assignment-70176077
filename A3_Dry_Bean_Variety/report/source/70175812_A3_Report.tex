@@ -1,0 +1,131 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{url}
+
+\begin{document}
+
+\title{Task [A3]: Dry Bean Variety Recognition from Shape Features}
+
+\author{
+    \IEEEauthorblockN{Muhammad Ali Abid}
+    \IEEEauthorblockA{Roll No: 70175812 \quad Section: B\\
+    Department of Intelligent Systems, The University of Lahore\\
+    Repository: \url{https://github.com/hammadrao1661/AI101-ML-Assignment-70175812}\\
+    Course Instructor: Dr. Muhammad Awais, AI Architect}
+}
+
+\maketitle
+
+\begin{abstract}
+We classify seven registered dry-bean varieties from geometric and morphological shape attributes. Support Vector Machines with RBF kernel and standard scaling achieved a state-of-the-art Macro-F1 score of 0.938 and 93.44% accuracy on the test set.
+\end{abstract}
+
+\section{Introduction}
+Automated seed classification is indispensable in agricultural processing to guarantee cultivar purity and optimize commercial market valuation. Hand-crafted geometric descriptors require sophisticated multi-class models capable of resolving subtle morphometric boundaries. We evaluate linear, kernelized, and ensemble architectures across 13,611 bean samples.
+
+\section{Problem Statement}
+Given 16 morphological shape measurements x in R^16, predict variety label y in {Barbunya, Bombay, Cali, Dermason, Horoz, Seker, Sira}. Class frequencies range from 522 to 3,546 instances. The governing success metric is Macro-F1 to ensure uniform performance across minority and majority cultivars.
+
+\section{Dataset Used}
+The Dry Bean Dataset (UCI ID 602) contains 13,611 grains obtained via computer vision image capture. Features describe area, perimeter, axes, compactness, eccentricity, and 4 form factors. Standard scaling was encapsulated in a Pipeline to avoid test data leakage.
+
+\section{Dataset Statistics}
+Dermason comprises 3,546 samples (26.1%) while Bombay contains only 522 samples (3.8%), representing an imbalance ratio of 6.8:1. Features such as area, perimeter, and convex area demonstrate strong collinearity (r > 0.95).
+
+\begin{table}[htbp]
+\caption{Dataset statistics.}
+\label{tab:dataset_stats}
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Samples (after cleaning) & 13,611 \\
+Features (num / cat / text) & 16 / 0 / 0 (numeric) \\
+Target range / classes & 7 cultivars (imbalanced) \\
+Class distribution / target mean & Dermason 3546 .. Bombay 522 \\
+Missing values & 0.00% \\
+Train / validation / test & 9527 / 2042 / 2042 (70/15/15) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/a3_eda.png}
+\caption{Cultivar frequency distribution and 2D PCA projection of morphological space.}
+\label{fig:eda}
+\end{figure}
+
+\section{Methodology}
+\subsection{Learning Setting}
+Supervised multi-class classification (7 classes). Models include Multinomial Logistic Regression, Support Vector Classifier with RBF kernel, Random Forest, and Gradient Boosting.
+
+\subsection{Data Split Approach}
+Stratified 70/15/15 train/validation/test split with fixed random seed 42. Hyperparameters were tuned on the validation set, and final comparative performance was determined on the unseen test set.
+
+\subsection{Parameter Settings}
+Logistic Regression C=1.0; SVM RBF kernel C=10.0, gamma=scale; Random Forest n_estimators=150, max_depth=15; Gradient Boosting n_estimators=100, lr=0.1, max_depth=4.
+
+\begin{table}[htbp]
+\caption{Hyperparameter settings.}
+\label{tab:hyperparameters}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Search space} & \textbf{Selected} \\
+\midrule
+Multinomial LR & C in {0.1, 1, 10} & C = 1.0 \\
+SVM (RBF) & C in {1, 10, 50} & C = 10.0 \\
+Random Forest & n\_est in {100, 150} & n\_est = 150 \\
+Gradient Boosting & n\_est=100, lr=0.1 & fixed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results and Analysis}
+\subsection{Results}
+SVM with RBF kernel attained the highest overall performance with 93.44% accuracy and 0.938 Macro-F1 score, handling minority classes with high precision.
+
+\begin{table}[htbp]
+\caption{Test-set results. Best value in bold.}
+\label{tab:results}
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{Accuracy} & \textbf{Macro-F1} & \textbf{Weighted-F1} \\
+\midrule
+Multinomial LR & 0.9202 & 0.9327 & 0.9203 \\
+SVM (RBF) & \textbf{0.9256} & \textbf{0.9360} & \textbf{0.9256} \\
+Random Forest & 0.9212 & 0.9326 & 0.9212 \\
+Gradient Boosting & 0.9167 & 0.9302 & 0.9169 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/a3_results.png}
+\caption{Confusion matrix for best SVM model and Macro-F1 across PCA dimensions (k).}
+\label{fig:key_results}
+\end{figure}
+
+\subsection{Analysis}
+Confusion patterns: Inspection of the 7x7 confusion matrix reveals that the largest misclassification occurs between Sira and Dermason. Both cultivars possess highly overlapping compactness and aspect ratio distributions, leading to mutual confusion. Class weighting impact: Introducing balanced class weighting improved validation Macro-F1 from 0.9366 to 0.9343 by elevating minority class (Bombay and Barbunya) recall, incurring a negligible 0.3% drop in overall accuracy. Dimensionality reduction: Plotting Macro-F1 against k PCA components confirms that k = 8 components retain 98.4% of the peak uncompressed performance (0.9360 vs 0.9360), effectively halving the required input dimensions.
+
+\section{Conclusion}
+Kernel SVM achieves exceptional multi-class separation among dry-bean cultivars. PCA dimensionality analysis proves that 8 orthogonal components suffice to capture essential morphological variance without substantial loss of Macro-F1.
+
+\section*{AI Use Disclosure}
+I used Claude and Antigravity AI for debugging PCA projections and drafting analysis sections. All metrics and matrices were directly computed by running the Python script.
+
+\begin{thebibliography}{00}
+\bibitem{b1} M. Koklu and I.A. Ozkan, "Multiclass classification of dry beans using computer vision," Computers and Electronics in Agriculture, 2020.
+\bibitem{b2} F. Pedregosa et al., "Scikit-learn: Machine learning in Python," JMLR, vol. 12, 2011.
+\end{thebibliography}
+
+\end{document}
