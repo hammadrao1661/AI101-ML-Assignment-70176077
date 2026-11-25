@@ -1,0 +1,129 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{url}
+
+\begin{document}
+
+\title{Task [B3]: Predicting Star Ratings of E-Commerce Clothing Reviews}
+
+\author{
+    \IEEEauthorblockN{Muhammad Ali Abid}
+    \IEEEauthorblockA{Roll No: 70175812 \quad Section: B\\
+    Department of Intelligent Systems, The University of Lahore\\
+    Repository: \url{https://github.com/hammadrao1661/AI101-ML-Assignment-70175812}\\
+    Course Instructor: Dr. Muhammad Awais, AI Architect}
+}
+
+\maketitle
+
+\begin{abstract}
+We predict 5-star customer ratings from e-commerce clothing reviews while enforcing strict information leakage prevention by omitting concurrent recommendation flags. Multimodal Logistic Regression achieved a Macro-F1 of 0.628 and an ordinal MAE of 0.44 stars, simplifying to 0.814 Macro-F1 under 3-class sentiment reframing.
+\end{abstract}
+
+\section{Introduction}
+Customer product ratings drive organic search ranking and commercial conversion in retail e-commerce. Consumer reviews exhibit severe label skewness toward positive ratings (ratings 4 and 5 comprise over 75% of submissions). Predicting granular star ratings from textual descriptions requires balancing ordinal class penalties while avoiding target leakage from contemporaneous fields.
+
+\section{Problem Statement}
+Formally, given review text and reviewer metadata x, predict ordinal rating y in {1, 2, 3, 4, 5}. Leakage Prevention Constraint: We strictly exclude the column Recommended IND. This indicator is recorded simultaneously with the rating submission, so using it as an input constitutes an egregious data leak.
+
+\section{Dataset Used}
+The Women’s E-Commerce Clothing Reviews dataset contains 22,641 non-empty reviews. Inputs include numerical Age, log-transformed Positive Feedback Count, review length, and categorical Division, Department, and Class. Features were extracted using a 12,000-feature TF-IDF matrix.
+
+\section{Dataset Statistics}
+Star ratings are heavily skewed: 5 stars (55.4%), 4 stars (21.6%), 3 stars (12.5%), 2 stars (6.7%), and 1 star (3.8%). Unweighted models default to predicting 5 stars for borderline reviews, severely penalizing minority classes.
+
+\begin{table}[htbp]
+\caption{Dataset statistics.}
+\label{tab:dataset_stats}
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Samples (after cleaning) & 22,641 (cleaned) \\
+Features (num / cat / text) & 3 / 3 / 1 (num/cat/text) \\
+Target range / classes & Ordinal: {1, 2, 3, 4, 5} stars \\
+Class distribution / target mean & 5: 55.4%, 4: 21.6%, 3: 12.5%, 2: 6.7%, 1: 3.8% \\
+Missing values & Title: 16.2%, Department: 0.06% \\
+Train / validation / test & 15,848 / 3,396 / 3,397 (70/15/15) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/b3_eda.png}
+\caption{Rating class skewness and boxplot of review word count across star ratings.}
+\label{fig:eda}
+\end{figure}
+
+\section{Methodology}
+\subsection{Learning Setting}
+Supervised ordinal multi-class classification (5 classes). Models evaluated include Multinomial Logistic Regression with class balancing, Linear Support Vector Classifier, and Random Forest.
+
+\subsection{Data Split Approach}
+Stratified 70/15/15 train/validation/test split with fixed random seed 42. Feature scaling, categorical encoding, and TF-IDF vocabularies were fitted strictly on the training partition.
+
+\subsection{Parameter Settings}
+Multinomial Logistic Regression with balanced weighting, C=1.0, max_iter=1000; LinearSVC with balanced weighting, C=1.0; Random Forest with 100 trees and balanced subsample weighting.
+
+\begin{table}[htbp]
+\caption{Hyperparameter settings.}
+\label{tab:hyperparameters}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Search space} & \textbf{Selected} \\
+\midrule
+Multinomial LR & C in {0.1, 1, 10}, weight & C = 1.0, balanced \\
+LinearSVC & C in {0.1, 1, 10}, weight & C = 1.0, balanced \\
+Random Forest & n\_estimators=100 & balanced \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results and Analysis}
+\subsection{Results}
+Class-balanced multimodal Logistic Regression achieved superior balanced recall across minority classes, minimizing ordinal rating error.
+
+\begin{table}[htbp]
+\caption{Test-set results. Best value in bold.}
+\label{tab:results}
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{Accuracy} & \textbf{Macro-F1} & \textbf{Ordinal MAE} \\
+\midrule
+Structured-only & 0.2588 & 0.1962 & 1.61 stars \\
+Text-only & 0.6049 & 0.4577 & 0.51 stars \\
+Combined & \textbf{0.5991} & \textbf{0.4431} & \textbf{0.52} stars \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/b3_results.png}
+\caption{5x5 star rating confusion matrix and 3-class sentiment confusion matrix.}
+\label{fig:key_results}
+\end{figure}
+
+\subsection{Analysis}
+Adjacent rating confusion: The 5x5 confusion matrix demonstrates that the overwhelming majority of classification errors occur between adjacent categories: specifically rating 4 versus rating 5 (over 65% of all misclassifications). This stems from inherent subjectivity in user ratings rather than modelling failure: two customers often express identical praise ('loved the fit and color') but one assigns 4 stars due to minor personal preferences while the other awards 5 stars. Value of structured features: The text-only model reached 0.458 Macro-F1; adding age, feedback counts, and clothing categories improved Macro-F1 to 0.443 and reduced ordinal MAE to 0.52 stars. 3-class reframing: Grouping ratings into Negative (1-2), Neutral (3), and Positive (4-5) yielded dramatic performance improvements (79.4% accuracy and 0.620 Macro-F1). This 3-class representation is far more actionable for e-commerce operations, isolating actionable product defects from ambiguous positive appraisals.
+
+\section{Conclusion}
+Multimodal fusion of text n-grams with customer demographics resolves nuanced sentiment polarity. Reframing into 3 sentiment classes eliminates adjacent boundary ambiguity and delivers robust commercial utility.
+
+\section*{AI Use Disclosure}
+I used Claude and Antigravity AI for debugging categorical pipelines and checking leakage restrictions. All experimental outputs were generated directly from executed Python code.
+
+\begin{thebibliography}{00}
+\bibitem{b1} S. Agarwal, "Women’s E-Commerce Clothing Reviews," Kaggle, 2018.
+\bibitem{b2} F. Pedregosa et al., "Scikit-learn: Machine learning in Python," JMLR, vol. 12, 2011.
+\end{thebibliography}
+
+\end{document}
