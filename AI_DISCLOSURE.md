@@ -2,8 +2,8 @@
 
 **Course:** Introduction to Artificial Intelligence (AI-101) | Fall 2026  
 **Instructor:** Dr. Muhammad Awais, AI Architect  
-**Student Name:** Muhammad Ali Abid  
-**Roll Number:** 70175812  
+**Student Name:** M Hammad  
+**Roll Number:** 70176077  
 **Section:** B  
 
 ---
