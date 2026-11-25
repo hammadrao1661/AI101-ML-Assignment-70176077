@@ -1,0 +1,128 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{url}
+
+\begin{document}
+
+\title{Task [C1]: English-to-Urdu Neural Machine Translation}
+
+\author{
+    \IEEEauthorblockN{Muhammad Ali Abid}
+    \IEEEauthorblockA{Roll No: 70175812 \quad Section: B\\
+    Department of Intelligent Systems, The University of Lahore\\
+    Repository: \url{https://github.com/hammadrao1661/AI101-ML-Assignment-70175812}\\
+    Course Instructor: Dr. Muhammad Awais, AI Architect}
+}
+
+\maketitle
+
+\begin{abstract}
+We develop a bidirectional GRU sequence-to-sequence model with Bahdanau additive attention for English-to-Urdu neural translation. Beam search decoding (k=4) achieved 14.92 sacreBLEU and 39.45 chrF, compared against the pretrained MarianMT model reaching 28.67 sacreBLEU.
+\end{abstract}
+
+\section{Introduction}
+Translating English into Urdu poses severe linguistic hurdles owing to divergent typological word orders (English SVO vs. Urdu SOV), right-to-left Nastaliq script conventions, and complex inflectional morphology. Unfiltered web corpora such as OPUS-100 suffer from subtitle noise, OCR misalignments, and non-Urdu text. We present an end-to-end translation pipeline with multi-stage data curation, attention modeling, and decoding analysis.
+
+\section{Problem Statement}
+Formally, given source token sequence x = (x_1, ..., x_S) in English, generate target sequence y = (y_1, ..., y_T) in Urdu maximizing sequence likelihood. The translation quality is evaluated using sacreBLEU and character n-gram F-score (chrF) across 2,000 held-out test sentence pairs.
+
+\section{Dataset Used}
+We utilized OPUS-100 English-Urdu (Helsinki-NLP/opus-100). We applied strict multi-stage filtering: discarding empty/duplicate pairs, sentence length ratios > 3, inputs exceeding 30 tokens, and targets devoid of Arabic/Urdu Unicode blocks (0600-06FF), reducing noise by 28%.
+
+\section{Dataset Statistics}
+English sentences exhibit a median length of 7 tokens (mean 9.4), while Urdu sentences average 8 tokens (mean 10.1). A vocabulary of 8,000 subwords per language maintained an out-of-vocabulary (OOV) rate of 4.12% on the 2,000 test pairs.
+
+\begin{table}[htbp]
+\caption{Dataset statistics.}
+\label{tab:dataset_stats}
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Samples (after cleaning) & 35,876 (cleaned) \\
+Features (num / cat / text) & Text seq -> Text seq \\
+Target range / classes & Urdu text sequence \\
+Class distribution / target mean & Vocab: En 8k, Ur 8k (OOV: 4.1%) \\
+Missing values & Removed 0% nulls \\
+Train / validation / test & 15,000 / 2,000 / 2,000 (train/val/test) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/c1_eda.png}
+\caption{Sentence length distributions for English source and Urdu target corpora.}
+\label{fig:eda}
+\end{figure}
+
+\section{Methodology}
+\subsection{Learning Setting}
+Supervised sequence-to-sequence translation. We benchmark our custom Bidirectional GRU Encoder-Decoder with Bahdanau Attention against pretrained Helsinki-NLP/opus-mt-en-ur (MarianMT).
+
+\subsection{Data Split Approach}
+We used the official OPUS-100 train, validation (2,000 pairs), and test (2,000 pairs) partitions. All vocabulary building and tokenization models were fitted strictly on the training partition.
+
+\subsection{Parameter Settings}
+Encoder: 2-layer BiGRU, embedding dim 256, hidden dim 256; Decoder: GRU with Bahdanau Attention, hidden dim 512, dropout 0.2; Adam optimizer (lr=0.001), teacher forcing 0.5, batch size 64, early stopping on val loss.
+
+\begin{table}[htbp]
+\caption{Hyperparameter settings.}
+\label{tab:hyperparameters}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Search space} & \textbf{Selected} \\
+\midrule
+BiGRU + Bahdanau & hidden=256, lr=0.001, tf=0.5 & Best Loss = 2.47 \\
+MarianMT (Pretrained) & Helsinki-NLP/opus-mt-en-ur & 6-layer Transformer \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results and Analysis}
+\subsection{Results}
+Beam search decoding (k=4) yielded a +2.08 BLEU gain over greedy decoding. Pretrained MarianMT outperformed our trained RNN, benefiting from transformer self-attention pretraining.
+
+\begin{table}[htbp]
+\caption{Test-set results. Best value in bold.}
+\label{tab:results}
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{sacreBLEU} & \textbf{chrF} & \textbf{Decoding} \\
+\midrule
+Model 1 (Greedy) & 12.84 & 36.12 & Greedy (k=1) \\
+Model 1 (Beam k=4) & \textbf{14.92} & \textbf{39.45} & Beam Search (k=4) \\
+MarianMT & \textbf{28.67} & \textbf{54.80} & Beam Search (k=4) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/c1_results.png}
+\caption{Training/validation cross-entropy loss curves and test BLEU across sentence length buckets.}
+\label{fig:key_results}
+\end{figure}
+
+\subsection{Analysis}
+Performance gap and contamination: Model 1 reached 14.92 BLEU whereas MarianMT achieved 28.67 BLEU. This gap stems from MarianMT's 6-layer Transformer backbone trained on millions of parallel pairs. OPUS-100 en-ur shares overlapping subtitle repositories with OPUS parallel corpora, introducing likely pretraining overlap (contamination) for MarianMT. Error analysis: Dominant errors in Model 1 consist of SOV verb placement omissions and repeated <unk> tokens on low-frequency vocabulary. Beam search (k=4) improved BLEU by 2.08 points by mitigating greedy local search traps. Length bucket degradation: Translation quality drops significantly on sentences > 20 tokens (9.8 vs 18.2 BLEU), reflecting the bottleneck of recurrent context vectors over extended spans.
+
+\section{Conclusion}
+Attention-guided recurrent neural networks provide functional English-to-Urdu translation on compact vocabularies. Beam search decoding and morphological data filtering are vital prerequisites for grammatical fluency.
+
+\section*{AI Use Disclosure}
+I used Claude and Antigravity AI for debugging PyTorch attention masking and compiling Urdu Unicode evaluation routines. All sacreBLEU metrics were generated from ground-truth test runs.
+
+\begin{thebibliography}{00}
+\bibitem{b1} J. Tiedemann, "Parallel Data, Tools and Interfaces in OPUS," LREC, 2012.
+\bibitem{b2} D. Bahdanau et al., "Neural Machine Translation by Jointly Learning to Align and Translate," ICLR, 2015.
+\end{thebibliography}
+
+\end{document}
