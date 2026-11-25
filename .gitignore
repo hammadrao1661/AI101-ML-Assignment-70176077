@@ -1,0 +1,33 @@
+# Python virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Raw dataset files (Rule: do not commit datasets > 50 MB)
+data/
+*.csv
+*.parquet
+*.arrow
+*.jsonl
+
+# Large model checkpoints (> 50 MB)
+*.pt
+*.pth
+*.h5
+*.bin
+*.pkl
+*.onnx
+
+# System and OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
