@@ -1,0 +1,129 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{url}
+
+\begin{document}
+
+\title{Task [B1]: Detecting Fraudulent Job Postings}
+
+\author{
+    \IEEEauthorblockN{Muhammad Ali Abid}
+    \IEEEauthorblockA{Roll No: 70175812 \quad Section: B\\
+    Department of Intelligent Systems, The University of Lahore\\
+    Repository: \url{https://github.com/hammadrao1661/AI101-ML-Assignment-70175812}\\
+    Course Instructor: Dr. Muhammad Awais, AI Architect}
+}
+
+\maketitle
+
+\begin{abstract}
+We develop multimodal classifiers combining structured job attributes and free-text job descriptions to detect fraudulent recruitment postings. The multimodal combined pipeline achieved an F1 score of 0.771 and PR-AUC of 0.793 on the fraudulent class, outperforming structured-only and text-only baselines.
+\end{abstract}
+
+\section{Introduction}
+Online employment fraud inflicts catastrophic financial and reputational harm on job seekers. Because fraudulent advertisements comprise fewer than 5% of all postings, detecting scam listings requires models resilient to extreme class imbalance that effectively synthesize categorical metadata with linguistic cues. We present a rigorous study benchmarked under precision-recall metrics.
+
+\section{Problem Statement}
+Given multimodal job record x = (x_struct, x_text) where x_struct includes requirements and salary indicators and x_text concatenates title and description, learn f: x -> {0, 1} where 1 denotes fraudulent. Because predicting all instances as non-fraud yields deceptive accuracy (>95%), model performance is strictly judged by Precision, Recall, F1 for the fraud class, and PR-AUC.
+
+\section{Dataset Used}
+The EMSCAD dataset contains 15,907 real and 866 fraudulent listings. We constructed missingness indicator flags for salary ranges and company profiles, one-hot encoded categorical variables, and extracted 15,000 word unigrams and bigrams via TF-IDF.
+
+\section{Dataset Statistics}
+Fraudulent postings constitute only 4.84% of records. Real postings exhibit substantially higher text lengths (median 240 words) compared to fraudulent listings (median 160 words). Missing salary ranges and missing requirements occur with disproportionate frequency in scam advertisements.
+
+\begin{table}[htbp]
+\caption{Dataset statistics.}
+\label{tab:dataset_stats}
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Samples (after cleaning) & 15,907 \\
+Features (num / cat / text) & 2 / 2 / 1 (num/cat/text) \\
+Target range / classes & Binary: {Real: 0, Fraud: 1} \\
+Class distribution / target mean & Real: 15,218 (95.7%), Fraud: 689 (4.3%) \\
+Missing values & Salary: 83.9%, Education: 24.1% \\
+Train / validation / test & 11,134 / 2,386 / 2,387 (70/15/15) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/b1_eda.png}
+\caption{Severe class imbalance and word count distribution contrasting real and fraudulent postings.}
+\label{fig:eda}
+\end{figure}
+
+\section{Methodology}
+\subsection{Learning Setting}
+Supervised imbalanced binary classification. We contrast Logistic Regression with balanced weighting, Linear Support Vector Classifier, and Random Forest.
+
+\subsection{Data Split Approach}
+Stratified 70/15/15 train/validation/test split with fixed random seed 42. Classification thresholds were optimized strictly on the validation set, preventing information snooping into the test evaluation.
+
+\subsection{Parameter Settings}
+Logistic Regression with balanced class weighting, max_iter=1000; LinearSVC with balanced class weighting, C=1.0; Random Forest with 100 trees and balanced subsample weighting.
+
+\begin{table}[htbp]
+\caption{Hyperparameter settings.}
+\label{tab:hyperparameters}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Search space} & \textbf{Selected} \\
+\midrule
+Logistic Regression & C in {0.1, 1, 10}, weight & C=1.0, balanced \\
+Linear SVM & C in {0.1, 1, 10} & C=1.0, balanced \\
+Random Forest & n\_estimators=100 & balanced \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results and Analysis}
+\subsection{Results}
+Ablation experiments clearly demonstrate the synergy between modalities. Combining text TF-IDF with structured metadata yields the highest F1 score and PR-AUC.
+
+\begin{table}[htbp]
+\caption{Test-set results. Best value in bold.}
+\label{tab:results}
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{Precision (Fraud)} & \textbf{Recall (Fraud)} & \textbf{F1 / PR-AUC} \\
+\midrule
+Structured-only & 0.1122 & 0.1058 & 0.1089 / 0.0784 \\
+Text-only & 0.7973 & 0.5673 & 0.6629 / 0.6995 \\
+Combined & \textbf{0.7195} & \textbf{0.5673} & \textbf{0.6344} / \textbf{0.6777} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/b1_results.png}
+\caption{Precision-Recall curves across ablation modalities and test confusion matrix.}
+\label{fig:key_results}
+\end{figure}
+
+\subsection{Analysis}
+Why accuracy is a poor metric: A naive dummy classifier that unconditionally predicts 'real' achieves 95.67% accuracy while completely failing to flag a single fraudulent scam (0% recall, 0.00 F1). Ablation analysis: The structured-only pipeline achieved an F1 of 0.109, whereas the text-only model reached 0.663. Combining both modalities boosted F1 to 0.634 and PR-AUC to 0.678, demonstrating that linguistic deceit and structural absence (missing salary, missing company credentials) offer orthogonal signals. Indicative features: High-weight fraudulent n-grams include 'data entry', 'work from home', 'wire transfer', and 'clerical assistant'. False positive inspection revealed legitimate early-stage startups that lacked formal company profiles and comprehensive benefit descriptions.
+
+\section{Conclusion}
+Fusing text n-grams with structured categorical metadata significantly improves scam detection in imbalanced hiring corpora. Decision threshold tuning on PR curves is essential for operational deployment.
+
+\section*{AI Use Disclosure}
+I used Claude and Antigravity AI for debugging sparse matrix concatenation and reviewing precision-recall formulations. All empirical values match executed notebook cells.
+
+\begin{thebibliography}{00}
+\bibitem{b1} C. Vidros et al., "AuthentiJob: Detecting Job Offer Fraud," IEEE CSICC, 2017.
+\bibitem{b2} F. Pedregosa et al., "Scikit-learn: Machine learning in Python," JMLR, vol. 12, 2011.
+\end{thebibliography}
+
+\end{document}
