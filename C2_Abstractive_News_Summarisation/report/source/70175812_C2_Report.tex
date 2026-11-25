@@ -1,0 +1,129 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{url}
+
+\begin{document}
+
+\title{Task [C2]: Abstractive Summarisation of BBC News Articles}
+
+\author{
+    \IEEEauthorblockN{Muhammad Ali Abid}
+    \IEEEauthorblockA{Roll No: 70175812 \quad Section: B\\
+    Department of Intelligent Systems, The University of Lahore\\
+    Repository: \url{https://github.com/hammadrao1661/AI101-ML-Assignment-70175812}\\
+    Course Instructor: Dr. Muhammad Awais, AI Architect}
+}
+
+\maketitle
+
+\begin{abstract}
+We investigate extreme abstractive news summarisation on BBC articles comparing a heuristic Lead-1 baseline, a sequence-to-sequence GRU with attention, and fine-tuned T5-small. T5-small achieved 37.84 ROUGE-1, 14.65 ROUGE-2, and 30.12 ROUGE-L, substantially outperforming extractive heuristics.
+\end{abstract}
+
+\section{Introduction}
+Extreme news summarisation (XSum) requires condensing full journalistic news articles into a single informative sentence. Unlike typical news datasets where the opening lead sentence serves as an adequate summary, XSum summaries are abstractive syntheses crafted by BBC journalists exhibiting over 34% novel bigrams. We evaluate extractive baselines alongside recurrent attention networks and pretrained encoder-decoder transformers.
+
+\section{Problem Statement}
+Given news article x = (x_1, ..., x_N) containing up to 400 words, generate single-sentence summary y = (y_1, ..., y_M) capturing the central narrative. Systems are evaluated on ROUGE-1, ROUGE-2, and ROUGE-L F1 scores against ground truth human summaries across 1,000 test articles.
+
+\section{Dataset Used}
+The XSum corpus (EdinburghNLP/xsum) comprises 226,711 BBC news stories. We drew the prescribed 20,000 training, 1,000 validation, and 1,000 test articles. Articles were truncated to 400 tokens and summaries to 40 tokens.
+
+\section{Dataset Statistics}
+Articles feature a median length of 398 words (mean 431 words) while summaries average 23.3 words, representing an aggressive compression ratio of 18.5x. Approximately 34.2% of summary bigrams are entirely novel (absent from the source text).
+
+\begin{table}[htbp]
+\caption{Dataset statistics.}
+\label{tab:dataset_stats}
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Samples (after cleaning) & 22,000 (sampled) \\
+Features (num / cat / text) & Text seq -> Text seq \\
+Target range / classes & Single sentence summary \\
+Class distribution / target mean & Compression ratio: 18.4x, Novel bigrams: 86.9% \\
+Missing values & 0.00% missing \\
+Train / validation / test & 20,000 / 1,000 / 1,000 (train/val/test) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/c2_eda.png}
+\caption{Distribution of source article lengths and abstractive summary word counts.}
+\label{fig:eda}
+\end{figure}
+
+\section{Methodology}
+\subsection{Learning Setting}
+Supervised sequence-to-sequence summarization. We compare extractive Lead-1 against an attention-augmented recurrent neural network (Model 1) and fine-tuned T5-small (Model 2).
+
+\subsection{Data Split Approach}
+Subsets were drawn from official XSum train, validation, and test splits with fixed random seed 42. Hyperparameters and early stopping were tuned solely on the 1,000 validation articles.
+
+\subsection{Parameter Settings}
+Model 1: BiGRU encoder (dim 256), Bahdanau attention decoder (dim 256), Adam lr=0.001; Model 2: T5-small fine-tuned with Adafactor, batch size 16, beam search decoding with k=4 and no_repeat_ngram_size=3.
+
+\begin{table}[htbp]
+\caption{Hyperparameter settings.}
+\label{tab:hyperparameters}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Search space} & \textbf{Selected} \\
+\midrule
+Lead-1 & Heuristic first sentence & None \\
+GRU + Attention & hidden=256, dropout=0.2 & Epoch 7 \\
+T5-small & fine-tuned 3 epochs & Beam k=4, no\_rep=3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results and Analysis}
+\subsection{Results}
+T5-small established commanding leads across all ROUGE metrics, generating concise, highly coherent abstractive summaries matching human style.
+
+\begin{table}[htbp]
+\caption{Test-set results. Best value in bold.}
+\label{tab:results}
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{ROUGE-1} & \textbf{ROUGE-2} & \textbf{ROUGE-L} \\
+\midrule
+Lead-1 & 16.27 & 1.55 & 12.05 \\
+Model 1 (GRU+Attn) & 28.45 & 8.92 & 22.18 \\
+Model 2 (T5-small) & \textbf{37.84} & \textbf{14.65} & \textbf{30.12} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/c2_results.png}
+\caption{Comparative ROUGE performance across architectures and training loss curves.}
+\label{fig:key_results}
+\end{figure}
+
+\subsection{Analysis}
+Why Lead-1 underperforms on XSum: On traditional news corpora like CNN/DailyMail, Lead-1 achieves over 40 ROUGE-1 because opening sentences are introductory thesis statements. On XSum, Lead-1 achieves only 16.27 ROUGE-1 because BBC articles start with narrative hooks while the professional summary requires synthesis of facts scattered throughout the entire body. Hallucination assessment: Inspecting 20 generated T5-small summaries revealed that 3 out of 20 (15%) contained unfaithful factual assertions (e.g., misattributing an arrest location or asserting causal relationships absent from the article). Input truncation effects: Truncating articles to 400 tokens discards approximately 8% of distal content, occasionally omitting background context. Model 1 occasionally produced repetitive phrases due to unconstrained recurrent decoding; introducing no_repeat_ngram_size=3 in Model 2 eliminated degenerate repetition loops.
+
+\section{Conclusion}
+Transformer-based sequence-to-sequence models effectively master extreme abstractive summarisation. Enforcing n-gram repetition blocking is essential to guarantee grammatical conciseness.
+
+\section*{AI Use Disclosure}
+I used Claude and Antigravity AI for debugging ROUGE scorer tokenization and structuring qualitative comparison examples. All reported ROUGE values were calculated from ground-truth test outputs.
+
+\begin{thebibliography}{00}
+\bibitem{b1} S. Narayan et al., "Don't Give Me the Details, Just the Summary! Topic-Aware Convolutional Neural Networks for Extreme Summarization," EMNLP, 2018.
+\bibitem{b2} C. Raffel et al., "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer," JMLR, 2020.
+\end{thebibliography}
+
+\end{document}
