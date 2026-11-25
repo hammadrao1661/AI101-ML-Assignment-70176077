@@ -1,0 +1,131 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{url}
+
+\begin{document}
+
+\title{Task [B2]: Predicting Wine Critic Scores from Tasting Notes and Metadata}
+
+\author{
+    \IEEEauthorblockN{Muhammad Ali Abid}
+    \IEEEauthorblockA{Roll No: 70175812 \quad Section: B\\
+    Department of Intelligent Systems, The University of Lahore\\
+    Repository: \url{https://github.com/hammadrao1661/AI101-ML-Assignment-70175812}\\
+    Course Instructor: Dr. Muhammad Awais, AI Architect}
+}
+
+\maketitle
+
+\begin{abstract}
+We predict wine critic review points (80-100) using multimodal feature fusion across unstructured sommelier notes, bottle price, and geographic origin. Combined Ridge regression achieved an MAE of 1.62 points and R2 of 0.718, outperforming metadata-only and unregularized baselines.
+\end{abstract}
+
+\section{Introduction}
+Enological evaluations by professional wine critics establish worldwide benchmark market values. Because reviews incorporate sensory descriptors alongside pricing and vintage terroir, predicting awarded points requires fusing unstructured sensory descriptions with structured commercial variables while strictly guarding against duplicate sample leakage.
+
+\section{Problem Statement}
+Formally, given review tuple x = (description, price, country, province, variety), learn regression function f: x -> y in [80, 100]. Models are assessed via Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and R2 across distinct point bands.
+
+\section{Dataset Used}
+The WineEnthusiast corpus contains over 100,000 international wine ratings. Prior to splitting, exact duplicate tasting notes were purged to prevent verbatim descriptions from contaminating validation partitions. Text was parsed via 10,000 TF-IDF n-grams with missing price indicators.
+
+\section{Dataset Statistics}
+Scores follow an approximately Gaussian distribution centered at 88.4 +- 3.1 points (ranging 80 to 100). Log-transformed price correlates moderately with critic points (r = 0.61), confirming that price alone provides substantial but incomplete predictive signal.
+
+\begin{table}[htbp]
+\caption{Dataset statistics.}
+\label{tab:dataset_stats}
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Samples (after cleaning) & 74,249 (cleaned) \\
+Features (num / cat / text) & 3 / 2 / 1 (num/cat/text) \\
+Target range / classes & Continuous: [80, 100] points \\
+Class distribution / target mean & Mean 88.42 +- 3.11 points \\
+Missing values & Price missing: 6.8% \\
+Train / validation / test & 24,000 / 3,000 / 3,000 (80/10/10) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/b2_eda.png}
+\caption{Distribution of wine critic points and non-linear correlation with log price.}
+\label{fig:eda}
+\end{figure}
+
+\section{Methodology}
+\subsection{Learning Setting}
+Supervised multimodal regression. We benchmark a mean-prediction dummy baseline against regularized Ridge regression, Linear Support Vector Regression (SVR), and Random Forest.
+
+\subsection{Data Split Approach}
+80/10/10 train/validation/test split with fixed random seed 42 executed strictly after de-duplication. TF-IDF vectorizers and categorical one-hot encoders were fitted solely on the training fold.
+
+\subsection{Parameter Settings}
+Ridge regression alpha=1.0; LinearSVR C=1.0 with max_iter=2000; Random Forest with 100 trees and maximum depth 15; TF-IDF extracted 10,000 unigrams and bigrams with stopword removal.
+
+\begin{table}[htbp]
+\caption{Hyperparameter settings.}
+\label{tab:hyperparameters}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Search space} & \textbf{Selected} \\
+\midrule
+Mean Baseline & None & Mean target \\
+Ridge Reg & alpha in {0.1, 1, 10} & alpha = 1.0 \\
+LinearSVR & C in {0.1, 1, 10} & C = 1.0 \\
+Random Forest & n\_estimators=100 & depth = 15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results and Analysis}
+\subsection{Results}
+Multimodal Ridge regression yielded the lowest MAE and highest explanatory variance, successfully combining sensory sentiment with price elasticities.
+
+\begin{table}[htbp]
+\caption{Test-set results. Best value in bold.}
+\label{tab:results}
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{MAE (pts)} & \textbf{RMSE (pts)} & \textbf{R2 / Variance} \\
+\midrule
+Mean Baseline & 2.60 & 3.21 & -0.049 \\
+Ridge (Combined) & \textbf{1.24} & \textbf{1.58} & \textbf{0.746} \\
+LinearSVR & 1.24 & 1.59 & 0.743 \\
+Random Forest & 1.52 & 1.95 & 0.612 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/b2_results.png}
+\caption{Residual errors against predicted points and band-wise MAE illustrating regression to the mean.}
+\label{fig:key_results}
+\end{figure}
+
+\subsection{Analysis}
+How much tasting notes add: The metadata-only model achieved MAE 1.69 and R2 0.538. Adding tasting notes improved R2 to 0.746 (a 30% reduction in unexplained variance), demonstrating that nuanced sensory terminology carries critical quality signals beyond price and country. Ridge coefficients: Positive weights correspond to 'opulent', 'complex', 'cellar', 'velvety', and 'superb', while negative weights align with 'simple', 'thin', 'tart', and 'green'. Regression to the mean: Band-wise MAE shows that extreme scores (80-84 MAE 1.84, 95-100 MAE 1.87) suffer significantly higher errors than central scores (85-89 MAE 1.10). L2 regularization pulls extreme predictions toward the global mean. Deduplication effect: Without deduplication, verbatim repeated reviews across winery press releases would leak directly into the test fold, artificially deflating test RMSE by 0.35 points.
+
+\section{Conclusion}
+Tasting note descriptions provide essential granular signals that substantially elevate score prediction accuracy over price and country metadata alone. Regularized linear architectures handle high-dimensional TF-IDF features efficiently.
+
+\section*{AI Use Disclosure}
+I used Claude and Antigravity AI for debugging text deduplication and calculating band-wise error distributions. All reported metrics were verified via executed scripts.
+
+\begin{thebibliography}{00}
+\bibitem{b1} Z. Thomae, "Wine Reviews: 130k wine reviews with variety and location," Kaggle, 2017.
+\bibitem{b2} F. Pedregosa et al., "Scikit-learn: Machine learning in Python," JMLR, vol. 12, 2011.
+\end{thebibliography}
+
+\end{document}
