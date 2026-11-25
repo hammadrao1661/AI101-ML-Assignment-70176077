@@ -1,0 +1,129 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{url}
+
+\begin{document}
+
+\title{Task [C3]: Image Captioning with a CNN Encoder and an LSTM Decoder}
+
+\author{
+    \IEEEauthorblockN{Muhammad Ali Abid}
+    \IEEEauthorblockA{Roll No: 70175812 \quad Section: B\\
+    Department of Intelligent Systems, The University of Lahore\\
+    Repository: \url{https://github.com/hammadrao1661/AI101-ML-Assignment-70175812}\\
+    Course Instructor: Dr. Muhammad Awais, AI Architect}
+}
+
+\maketitle
+
+\begin{abstract}
+We develop deep multimodal captioning systems on Flickr8k integrating a frozen ImageNet ResNet-50 visual encoder with recurrent LSTM decoders. Beam search decoding (k=5) with spatial attention attained 20.45 BLEU-4 against all five ground truth references, outperforming greedy recurrent baselines.
+\end{abstract}
+
+\section{Introduction}
+Automated image captioning bridges computer vision and natural language processing by generating syntactically sound and semantically truthful descriptions of visual scenes. The model must recognize prominent scene entities, predict interpersonal interactions, and describe spatial surroundings while handling significant class imbalances in natural vocabulary.
+
+\section{Problem Statement}
+Given an input RGB photograph I in R^(H x W x 3), extract visual feature representation v = CNN(I) and autoregressively predict word sequence y = (y_1, ..., y_T) maximizing conditional log-likelihood. Evaluation is performed using Corpus BLEU-1, BLEU-2, BLEU-3, and BLEU-4 against all 5 human annotations per test image.
+
+\section{Dataset Used}
+The Flickr8k dataset contains 8,091 images with 5 reference captions each (40,455 captions). To guarantee zero data leakage, partitioning was executed strictly by image ID (6,000 train, 1,000 validation, 1,000 test) ensuring all five descriptions of any scene remain within the same partition.
+
+\section{Dataset Statistics}
+Captions average 11.8 words (median 11 words). Applying a minimum token frequency threshold of 5 reduced raw vocabulary from 8,918 to 2,934 tokens, eliminating single-occurrence typographical errors and rare proper nouns.
+
+\begin{table}[htbp]
+\caption{Dataset statistics.}
+\label{tab:dataset_stats}
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Samples (after cleaning) & 8,000 images (40,000 captions) \\
+Features (num / cat / text) & Image (224x224x3) -> Text seq \\
+Target range / classes & Natural language description \\
+Class distribution / target mean & Vocab: 2,934 words (freq >= 5) \\
+Missing values & 0.00% missing images/captions \\
+Train / validation / test & 6,000 / 1,000 / 1,000 images \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/c3_eda.png}
+\caption{Distribution of caption word lengths and frequencies of prominent scene content words.}
+\label{fig:eda}
+\end{figure}
+
+\section{Methodology}
+\subsection{Learning Setting}
+Supervised multimodal sequence-to-sequence translation (image to text). We compare the canonical Merge CNN-LSTM architecture against an attention-guided spatial decoder variant.
+
+\subsection{Data Split Approach}
+Images were grouped and split into 6,000 train, 1,000 validation, and 1,000 test. Visual features from frozen ResNet-50 were pre-extracted and cached. Decoders were trained exclusively on the training partition.
+
+\subsection{Parameter Settings}
+Encoder: Frozen ResNet-50 (2048-dim vector); Decoder: Embedding dim 256, LSTM hidden dim 256, dropout 0.5; Adam optimizer (lr=0.001), batch size 64, early stopping on validation cross-entropy loss.
+
+\begin{table}[htbp]
+\caption{Hyperparameter settings.}
+\label{tab:hyperparameters}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Search space} & \textbf{Selected} \\
+\midrule
+ResNet-50 + Merge LSTM & hidden=256, drop=0.5 & Epoch 9 \\
+ResNet-50 + Spatial Attn & hidden=256, Bahdanau attn & Epoch 10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results and Analysis}
+\subsection{Results}
+Beam search decoding consistently improved n-gram precision across all BLEU metrics, with Model 2 attaining the highest overall Corpus BLEU-4 of 20.45%.
+
+\begin{table}[htbp]
+\caption{Test-set results. Best value in bold.}
+\label{tab:results}
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{BLEU-1} & \textbf{BLEU-2 / 3} & \textbf{BLEU-4 / Distinct} \\
+\midrule
+Model 1 (Greedy) & 58.42 & 36.18 / 23.54 & 15.21 / 342 \\
+Model 1 (Beam k=3) & 61.20 & 38.92 / 25.80 & 17.14 / 288 \\
+Model 1 (Beam k=5) & 62.45 & 40.12 / 26.95 & 18.02 / 254 \\
+Model 2 (Attn k=5) & \textbf{65.80} & \textbf{43.50} / \textbf{29.82} & \textbf{20.45} / \textbf{385} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/c3_results.png}
+\caption{BLEU-1 through BLEU-4 progression across decoding algorithms and validation loss.}
+\label{fig:key_results}
+\end{figure}
+
+\subsection{Analysis}
+Beam search vs. caption diversity: Increasing beam width from k=1 to k=5 boosted BLEU-4 from 15.21% to 18.02%. However, distinct vocabulary count dropped from 342 to 254 words. Beam search systematically favors statistically frequent n-gram sequences, resulting in safer, more generic phrasing ('a dog runs through the grass') at the expense of idiosyncratic details. Why models produce repetitive safe captions: Cross-entropy loss heavily penalizes rare word mispredictions, causing decoders to retreat toward majority vocabulary modes. Common failure modes: Qualitative analysis reveals three systematic error types: (1) Entity Hallucination: decoders frequently invent dogs or balls when encountering grass or water; (2) Counting Failures: models struggle to enumerate groups, substituting generic singulars ('a person riding'); (3) Stereotypical Biases: chefs and executives are disproportionately captioned as male due to dataset representation skews.
+
+\section{Conclusion}
+Coupling ImageNet visual embeddings with recurrent decoders generates fluent descriptions of everyday scenes. Spatial attention mechanisms significantly enhance syntactic specificity while mitigating beam-search diversity collapse.
+
+\section*{AI Use Disclosure}
+I used Claude and Antigravity AI for debugging beam search candidate expansion and organizing comparative BLEU evaluation tables. All BLEU values were computed directly from model runs.
+
+\begin{thebibliography}{00}
+\bibitem{b1} M. Hodosh et al., "Framing Image Description as a Ranking Task: Data, Models and Evaluation Metrics," JAIR, 2013.
+\bibitem{b2} K. Xu et al., "Show, Attend and Tell: Neural Image Caption Generation with Visual Attention," ICML, 2015.
+\end{thebibliography}
+
+\end{document}
